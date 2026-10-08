@@ -1,7 +1,28 @@
 from datetime import datetime
 from sqlalchemy.orm import relationship
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
 from app.database import Base
+
+
+# Many-to-many relationship between roles and permissions
+role_permissions = Table(
+    "role_permissions",
+    Base.metadata,
+
+    Column(
+        "role_id",
+        Integer,
+        ForeignKey("roles.id"),
+        primary_key=True
+    ),
+
+    Column(
+        "permission_id",
+        Integer,
+        ForeignKey("permissions.id"),
+        primary_key=True
+    )
+)
 
 
 class User(Base):
@@ -77,6 +98,7 @@ class User(Base):
         nullable=True
     )
 
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -123,7 +145,6 @@ class Task(Base):
     )
 
 
-
 class Team(Base):
     __tablename__ = "teams"
 
@@ -155,6 +176,7 @@ class Team(Base):
         nullable=False
     )
 
+
 class TeamMember(Base):
     __tablename__ = "team_members"
 
@@ -171,6 +193,7 @@ class TeamMember(Base):
         ForeignKey("users.id"),
         nullable=False
     )
+
 
 class Role(Base):
     __tablename__ = "roles"
@@ -191,4 +214,38 @@ class Role(Base):
     description = Column(
         String,
         nullable=True
+    )
+
+    permissions = relationship(
+        "Permission",
+        secondary=role_permissions,
+        back_populates="roles"
+    )
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    name = Column(
+        String,
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    description = Column(
+        String,
+        nullable=True
+    )
+
+    roles = relationship(
+        "Role",
+        secondary=role_permissions,
+        back_populates="permissions"
     )

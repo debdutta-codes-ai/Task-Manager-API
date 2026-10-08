@@ -1,13 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import auth, crud
+from app import auth, crud, models
 from app.database import get_db
-from app.schemas import RoleCreate, RoleResponse, RoleUpdate
+from app.schemas import (
+    RoleCreate,
+    RoleResponse,
+    RoleUpdate,
+    RolePermissionCreate
+)
 
 
-router = APIRouter(prefix="/roles")
+router = APIRouter(
+    prefix="/roles",
+    tags=["Roles"]
+)
 
+
+# =========================================================
+# CREATE ROLE
+# Requires: change_roles
+# =========================================================
 
 @router.post(
     "/",
@@ -17,7 +30,9 @@ router = APIRouter(prefix="/roles")
 def create_role(
     role: RoleCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(auth.require_roles("admin"))
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
 ):
     db_role = crud.create_role(
         db,
@@ -34,6 +49,11 @@ def create_role(
     return db_role
 
 
+# =========================================================
+# UPDATE ROLE
+# Requires: change_roles
+# =========================================================
+
 @router.put(
     "/{role_id}",
     response_model=RoleResponse
@@ -43,7 +63,7 @@ def update_role(
     role: RoleUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("change_roles")
     )
 ):
     updated_role = crud.update_role(
@@ -66,12 +86,20 @@ def update_role(
 
     return updated_role
 
-@router.delete("/{role_id}")
+
+# =========================================================
+# DELETE ROLE
+# Requires: change_roles
+# =========================================================
+
+@router.delete(
+    "/{role_id}"
+)
 def delete_role(
     role_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("change_roles")
     )
 ):
     deleted_role = crud.delete_role(
@@ -99,4 +127,119 @@ def delete_role(
 
     return {
         "message": "Role deleted successfully"
+    }
+
+
+# =========================================================
+# ADD PERMISSION TO ROLE
+# Requires: change_roles
+# =========================================================
+
+@router.post(
+    "/{role_id}/permissions",
+    status_code=201
+)
+def add_permission_to_role(
+    role_id: int,
+    data: RolePermissionCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    role = (
+        db.query(models.Role)
+        .filter(models.Role.id == role_id)
+        .first()
+    )
+
+    if role is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Role not found"
+        )
+
+    permission = (
+        db.query(models.Permission)
+        .filter(
+            models.Permission.id == data.permission_id
+        )
+        .first()
+    )
+
+    if permission is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Permission not found"
+        )
+
+    if permission in role.permissions:
+        raise HTTPException(
+            status_code=409,
+            detail="Permission already assigned to this role"
+        )
+
+    role.permissions.append(permission)
+
+    db.commit()
+
+    return {
+        "message": "Permission assigned to role successfully"
+    }
+
+
+# =========================================================
+# REMOVE PERMISSION FROM ROLE
+# Requires: change_roles
+# =========================================================
+
+@router.delete(
+    "/{role_id}/permissions/{permission_id}"
+)
+def remove_permission_from_role(
+    role_id: int,
+    permission_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    role = (
+        db.query(models.Role)
+        .filter(models.Role.id == role_id)
+        .first()
+    )
+
+    if role is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Role not found"
+        )
+
+    permission = (
+        db.query(models.Permission)
+        .filter(
+            models.Permission.id == permission_id
+        )
+        .first()
+    )
+
+    if permission is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Permission not found"
+        )
+
+    if permission not in role.permissions:
+        raise HTTPException(
+            status_code=404,
+            detail="Permission is not assigned to this role"
+        )
+
+    role.permissions.remove(permission)
+
+    db.commit()
+
+    return {
+        "message": "Permission removed from role successfully"
     }

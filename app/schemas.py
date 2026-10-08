@@ -28,7 +28,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str
     status: str = "pending"
-    assigned_to_email: str | None = None
+    assigned_to_email: str 
     team_id: int | None = None
 
 
@@ -119,9 +119,30 @@ class TeamResponse(BaseModel):
 class TeamMemberAdd(BaseModel):
     user_id: int
 
+
 class TeamUpdate(BaseModel):
     name: str
     manager_id: int
+
+
+# =========================
+# Permission Schemas
+# =========================
+
+class PermissionCreate(BaseModel):
+    name: str
+    description: str | None = None
+
+
+class PermissionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    description: str | None = None
+
+class RolePermissionCreate(BaseModel):
+    permission_id: int
 
 # =========================
 # Role Schemas
@@ -132,13 +153,17 @@ class RoleCreate(BaseModel):
     description: str | None = None
 
 
+class RoleUpdate(BaseModel):
+    name: str
+    description: str | None = None
+
+
 class RoleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     name: str
     description: str | None = None
-
-class RoleUpdate(BaseModel):
-    name: str
-    description: str | None = None
+    permissions: list[PermissionResponse] = Field(
+        default_factory=list
+    )

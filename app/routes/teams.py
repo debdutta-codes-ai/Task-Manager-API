@@ -11,7 +11,7 @@ router = APIRouter(prefix="/teams")
 
 # =========================
 # Create Team
-# Admin Only
+# Requires change_roles permission
 # =========================
 
 @router.post(
@@ -22,7 +22,9 @@ router = APIRouter(prefix="/teams")
 def create_team(
     team: TeamCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(auth.require_roles("admin"))
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
 ):
     manager = (
         db.query(models.User)
@@ -57,7 +59,7 @@ def create_team(
 
 # =========================
 # Add Team Member
-# Admin Only
+# Requires change_roles permission
 # =========================
 
 @router.post("/{team_id}/members")
@@ -65,7 +67,9 @@ def add_team_member(
     team_id: int,
     member: TeamMemberAdd,
     db: Session = Depends(get_db),
-    current_user=Depends(auth.require_roles("admin"))
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
 ):
     team = (
         db.query(models.Team)
@@ -126,7 +130,12 @@ def add_team_member(
         "message": "User added to team successfully"
     }
 
-# update team (admin only)
+
+# =========================
+# Update Team
+# Requires change_roles permission
+# =========================
+
 @router.put(
     "/{team_id}",
     response_model=TeamResponse
@@ -136,7 +145,7 @@ def update_team(
     team: TeamUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("change_roles")
     )
 ):
     updated_team = crud.update_team(
@@ -165,13 +174,18 @@ def update_team(
 
     return updated_team
 
-# delete team (admin only)
+
+# =========================
+# Delete Team
+# Requires change_roles permission
+# =========================
+
 @router.delete("/{team_id}")
 def delete_team(
     team_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("change_roles")
     )
 ):
     deleted_team = crud.delete_team(
@@ -200,3 +214,4 @@ def delete_team(
     return {
         "message": "Team deleted successfully"
     }
+

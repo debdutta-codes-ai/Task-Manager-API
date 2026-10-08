@@ -17,9 +17,9 @@ from app.schemas import (
 router = APIRouter(prefix="/users")
 
 
-# =========================
-# Login
-# =========================
+# =========================================================
+# LOGIN
+# =========================================================
 
 @router.post(
     "/login",
@@ -53,7 +53,9 @@ def login(
         data={
             "sub": str(db_user.id)
         },
-        expires_delta=timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(
+            minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
     )
 
     return {
@@ -62,9 +64,9 @@ def login(
     }
 
 
-# =========================
-# My Profile
-# =========================
+# =========================================================
+# MY PROFILE
+# =========================================================
 
 @router.get(
     "/me",
@@ -76,10 +78,10 @@ def get_my_profile(
     return current_user
 
 
-# =========================
-# Get All Users
-# Admin Only
-# =========================
+# =========================================================
+# GET ALL USERS
+# Requires: manage_users
+# =========================================================
 
 @router.get(
     "/",
@@ -88,20 +90,20 @@ def get_my_profile(
 def get_users(
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("manage_users")
     )
 ):
     return (
-    db.query(models.User)
-    .filter(models.User.status == "active")
-    .all()
-)
+        db.query(models.User)
+        .filter(models.User.status == "active")
+        .all()
+    )
 
 
-# =========================
-# Get One User
-# Admin Only
-# =========================
+# =========================================================
+# GET ONE USER
+# Requires: manage_users
+# =========================================================
 
 @router.get(
     "/{user_id}",
@@ -111,7 +113,7 @@ def get_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("manage_users")
     )
 ):
     user = (
@@ -129,10 +131,10 @@ def get_user(
     return user
 
 
-# =========================
-# Create User
-# Admin Only
-# =========================
+# =========================================================
+# CREATE USER
+# Requires: manage_users
+# =========================================================
 
 @router.post(
     "/",
@@ -144,7 +146,7 @@ def create_user(
     user: AdminUserCreate,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("manage_users")
     )
 ):
     new_user = crud.create_user_by_admin(
@@ -162,10 +164,10 @@ def create_user(
     return new_user
 
 
-# =========================
-# Update User
-# Admin Only
-# =========================
+# =========================================================
+# UPDATE USER
+# Requires: manage_users
+# =========================================================
 
 @router.put(
     "/{user_id}",
@@ -176,7 +178,7 @@ def update_user(
     user: AdminUserUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("manage_users")
     )
 ):
     updated_user = crud.update_user_by_admin(
@@ -194,10 +196,10 @@ def update_user(
     return updated_user
 
 
-# =========================
-# Delete User
-# Admin Only
-# =========================
+# =========================================================
+# DELETE USER
+# Requires: manage_users
+# =========================================================
 
 @router.delete(
     "/{user_id}",
@@ -207,7 +209,7 @@ def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
     current_user=Depends(
-        auth.require_roles("admin")
+        auth.require_permissions("manage_users")
     )
 ):
     deleted_user = crud.delete_user_by_admin(
