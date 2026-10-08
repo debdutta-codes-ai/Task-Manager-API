@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-sqlalchemy
-pwdlib[argon2]
-PyJWT
-python-multipart
-python-dotenv

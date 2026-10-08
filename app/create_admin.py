@@ -1,18 +1,13 @@
-import os
-
-from dotenv import load_dotenv
 from pwdlib import PasswordHash
 
 from app.database import Base, engine, SessionLocal
 from app import models
+from app.config import settings
 
 
-load_dotenv()
-
-
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+ADMIN_USERNAME = settings.admin_username
+ADMIN_EMAIL = settings.admin_email
+ADMIN_PASSWORD = settings.admin_password
 
 
 if not ADMIN_USERNAME or not ADMIN_EMAIL or not ADMIN_PASSWORD:

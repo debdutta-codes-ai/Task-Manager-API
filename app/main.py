@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 
-from app.database import Base, engine
 from app.routes import (
     task,
     users,
@@ -8,8 +7,6 @@ from app.routes import (
     roles,
     permission
 )
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
