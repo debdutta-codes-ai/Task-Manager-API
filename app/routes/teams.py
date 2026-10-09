@@ -8,7 +8,62 @@ from app.schemas import TeamCreate, TeamResponse, TeamMemberAdd, TeamUpdate
 
 router = APIRouter(prefix="/teams")
 
+# =========================
+# Get All Teams
+# Requires change_roles permission
+# =========================
 
+@router.get(
+    "/",
+    response_model=list[TeamResponse]
+)
+def get_teams(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    # Return all teams ordered by ID
+    return (
+        db.query(models.Team)
+        .order_by(models.Team.id)
+        .all()
+    )
+
+
+# =========================
+# Get One Team
+# Requires change_roles permission
+# =========================
+
+@router.get(
+    "/{team_id}",
+    response_model=TeamResponse
+)
+def get_team(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    # Find the requested team
+    team = (
+        db.query(models.Team)
+        .filter(models.Team.id == team_id)
+        .first()
+    )
+
+    # Return 404 if the team doesn't exist
+    if team is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    return team
+
+    
 # =========================
 # Create Team
 # Requires change_roles permission

@@ -119,3 +119,24 @@ def delete_role(
     db.commit()
 
     return db_role
+
+# =========================================================
+# GET ALL ROLES
+# =========================================================
+
+def get_roles(db: Session):
+    # Fetch every role from the database
+    return db.query(models.Role).all()
+
+
+# =========================================================
+# GET ONE ROLE
+# =========================================================
+
+def get_role(db: Session, role_id: int):
+    # Find a role by its ID
+    return (
+        db.query(models.Role)
+        .filter(models.Role.id == role_id)
+        .first()
+    )

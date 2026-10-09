@@ -74,3 +74,56 @@ def test_get_current_user_with_invalid_token(client):
     )
 
     assert response.status_code == 401
+
+
+# # Test that a user without manage_users permission
+# # cannot access the user-management endpoint
+# def test_get_users_without_manage_users_permission(
+#     client,
+#     admin_headers
+# ):
+#     # Fetch the admin user from the database
+#     from app.database import SessionLocal
+#     from app import models
+
+#     db = SessionLocal()
+
+#     try:
+#         admin = (
+#             db.query(models.User)
+#             .filter(
+#                 models.User.username == settings.admin_username
+#             )
+#             .first()
+#         )
+
+#         assert admin is not None
+#         assert admin.role is not None
+
+#         # Save the original permissions so we can restore them
+#         original_permissions = list(admin.role.permissions)
+
+#         # Remove manage_users temporarily
+#         admin.role.permissions = [
+#             permission
+#             for permission in admin.role.permissions
+#             if permission.name != "manage_users"
+#         ]
+
+#         db.commit()
+
+#         # Try to access the protected endpoint
+#         response = client.get(
+#             "/users/",
+#             headers=admin_headers
+#         )
+
+#         # Access should be forbidden without manage_users
+#         assert response.status_code == 403
+
+#         # Restore the original permissions
+#         admin.role.permissions = original_permissions
+#         db.commit()
+
+#     finally:
+#         db.close()

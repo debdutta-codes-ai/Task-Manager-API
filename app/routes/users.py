@@ -10,6 +10,7 @@ from app.schemas import (
     UserResponse,
     AdminUserCreate,
     AdminUserUpdate,
+    UserRoleUpdate,
     Token
 )
 
@@ -228,3 +229,55 @@ def delete_user(
         )
 
     return deleted_user
+
+
+# =========================================================
+# CHANGE USER ROLE
+# Requires: change_roles
+# =========================================================
+
+@router.put(
+    "/{user_id}/role",
+    response_model=UserResponse
+)
+def change_user_role(
+    user_id: int,
+    role_data: UserRoleUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    # Find the user whose role should change
+    user = (
+        db.query(models.User)
+        .filter(models.User.id == user_id)
+        .first()
+    )
+
+    if user is None:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # Find the requested role
+    role = (
+        db.query(models.Role)
+        .filter(models.Role.id == role_data.role_id)
+        .first()
+    )
+
+    if role is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Role not found"
+        )
+
+    # Assign the new role to the user
+    user.role_id = role.id
+
+    db.commit()
+    db.refresh(user)
+
+    return user

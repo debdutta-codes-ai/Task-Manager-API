@@ -149,6 +149,10 @@ class PermissionResponse(BaseModel):
 class RolePermissionCreate(BaseModel):
     permission_id: int
 
+class PermissionUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
 # =========================
 # Role Schemas
 # =========================
@@ -172,3 +176,10 @@ class RoleResponse(BaseModel):
     permissions: list[PermissionResponse] = Field(
         default_factory=list
     )
+
+# =========================
+# Change User Role Schema
+# =========================
+
+class UserRoleUpdate(BaseModel):
+    role_id: int

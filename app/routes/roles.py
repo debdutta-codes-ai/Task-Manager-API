@@ -16,6 +16,53 @@ router = APIRouter(
     tags=["Roles"]
 )
 
+# =========================================================
+# GET ALL ROLES
+# Requires: change_roles
+# =========================================================
+
+@router.get(
+    "/",
+    response_model=list[RoleResponse]
+)
+def get_roles(
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    # Fetch all roles using the CRUD function
+    return crud.get_roles(db)
+
+# =========================================================
+# GET ONE ROLE
+# Requires: change_roles
+# =========================================================
+
+@router.get(
+    "/{role_id}",
+    response_model=RoleResponse
+)
+def get_role(
+    role_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(
+        auth.require_permissions("change_roles")
+    )
+):
+    # Fetch the requested role using the CRUD function
+    role = crud.get_role(db, role_id)
+
+    # Return 404 if the role does not exist
+    if role is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Role not found"
+        )
+
+    # Return the role, including its assigned permissions
+    return role
+
 
 # =========================================================
 # CREATE ROLE
@@ -236,6 +283,17 @@ def remove_permission_from_role(
             detail="Permission is not assigned to this role"
         )
 
+    # Prevent removing change_roles from the admin role
+    if (
+        role.name == "admin"
+        and permission.name == "change_roles"
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot remove change_roles from the admin role"
+        )
+
+    # Remove the permission from the role
     role.permissions.remove(permission)
 
     db.commit()

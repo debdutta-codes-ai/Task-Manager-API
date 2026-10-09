@@ -63,6 +63,151 @@ for role_data in default_roles:
 
 db.commit()
 
+# =========================
+# Create standard permissions
+# =========================
+
+default_permissions = [
+    # Read permissions
+    {
+        "name": "read_all_tasks",
+        "description": "Read all tasks"
+    },
+    {
+        "name": "read_own_task",
+        "description": "Read own tasks"
+    },
+    {
+        "name": "read_team_tasks",
+        "description": "Read team tasks"
+    },
+
+    # Create permissions
+    {
+        "name": "create_task",
+        "description": "Create tasks"
+    },
+
+    # Update permissions
+    {
+        "name": "update_any_task",
+        "description": "Update any task"
+    },
+    {
+        "name": "update_own_task",
+        "description": "Update own tasks"
+    },
+    {
+        "name": "update_team_task",
+        "description": "Update team tasks"
+    },
+
+    # Delete permissions
+    {
+        "name": "delete_any_task",
+        "description": "Delete any task"
+    },
+    {
+        "name": "delete_own_task",
+        "description": "Delete own tasks"
+    },
+    {
+        "name": "delete_team_task",
+        "description": "Delete team tasks"
+    },
+
+    # User and role management
+    {
+        "name": "manage_users",
+        "description": "Manage users"
+    },
+    {
+        "name": "change_roles",
+        "description": "Manage roles and permissions"
+    }
+]
+
+for permission_data in default_permissions:
+    existing_permission = (
+        db.query(models.Permission)
+        .filter(
+            models.Permission.name == permission_data["name"]
+        )
+        .first()
+    )
+
+    if existing_permission is None:
+        permission = models.Permission(
+            name=permission_data["name"],
+            description=permission_data["description"]
+        )
+
+        db.add(permission)
+
+db.commit()
+
+# =========================
+# Assign permissions to roles
+# =========================
+
+role_permissions = {
+    "admin": [
+        "read_all_tasks",
+        "read_own_task",
+        "read_team_tasks",
+        "create_task",
+        "update_any_task",
+        "update_own_task",
+        "update_team_task",
+        "delete_any_task",
+        "delete_own_task",
+        "delete_team_task",
+        "manage_users",
+        "change_roles"
+    ],
+    "manager": [
+        "read_own_task",
+        "read_team_tasks",
+        "create_task",
+        "update_own_task",
+        "update_team_task",
+        "delete_own_task",
+        "delete_team_task"
+    ],
+    "user": [
+        "read_own_task",
+        "create_task",
+        "update_own_task",
+        "delete_own_task"
+    ]
+}
+
+for role_name, permission_names in role_permissions.items():
+    # Find the role
+    role = (
+        db.query(models.Role)
+        .filter(models.Role.name == role_name)
+        .first()
+    )
+
+    if role is None:
+        continue
+
+    for permission_name in permission_names:
+        # Find the permission
+        permission = (
+            db.query(models.Permission)
+            .filter(
+                models.Permission.name == permission_name
+            )
+            .first()
+        )
+
+        if permission is not None and permission not in role.permissions:
+            # Add the permission only if it is not already assigned
+            role.permissions.append(permission)
+
+db.commit()
 
 # =========================
 # Get admin role
