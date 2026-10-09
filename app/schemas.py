@@ -82,9 +82,14 @@ class UserCreate(BaseModel):
 
 
 class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     username: str
     email: str
+    created_at: datetime
+    updated_at: datetime
+    last_login: datetime | None = None
 
 
 class UserLogin(BaseModel):

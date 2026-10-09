@@ -1,7 +1,24 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+)
+
 from app.database import Base
+
+
+# Generate the current IST time without microseconds
+def get_ist_time():
+    return datetime.now(
+        ZoneInfo("Asia/Kolkata")
+    ).replace(microsecond=0)
 
 
 # Many-to-many relationship between roles and permissions
@@ -65,14 +82,14 @@ class User(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=get_ist_time,
         nullable=False
     )
 
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=get_ist_time,
+        onupdate=get_ist_time,
         nullable=False
     )
 
@@ -133,14 +150,14 @@ class Task(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=get_ist_time,
         nullable=False
     )
 
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=get_ist_time,
+        onupdate=get_ist_time,
         nullable=False
     )
 
@@ -165,14 +182,14 @@ class Team(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow,
+        default=get_ist_time,
         nullable=False
     )
 
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=get_ist_time,
+        onupdate=get_ist_time,
         nullable=False
     )
 

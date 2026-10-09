@@ -48,6 +48,9 @@ def login(
             status_code=401,
             detail="Invalid username or password"
         )
+    # Record the successful login time in IST
+    db_user.last_login = models.get_ist_time()
+    db.commit()
 
     access_token = auth.create_access_token(
         data={
