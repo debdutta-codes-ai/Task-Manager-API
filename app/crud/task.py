@@ -164,16 +164,44 @@ def create_task(
 
     if task.team_id is not None:
 
-        # -------------------------------------------------
-        # Users who do not have team-task capability
-        # must belong to the specified team.
-        # -------------------------------------------------
+        # Check whether the selected team exists.
+        team = (
+            db.query(models.Team)
+            .filter(
+                models.Team.id == task.team_id
+            )
+            .first()
+        )
 
-        if (
-            "update_team_task" not in user_permissions
-            and "update_any_task" not in user_permissions
-        ):
+        if team is None:
+            return "not_allowed"
 
+        # Admins with update_any_task can use any existing team.
+        if "update_any_task" in user_permissions:
+            pass
+
+        # Managers must manage the selected team, and the
+        # assigned user must belong to that exact team.
+        elif "update_team_task" in user_permissions:
+
+            if team.manager_id != current_user.id:
+                return "not_allowed"
+
+            if assigned_user is not None:
+                member = (
+                    db.query(models.TeamMember)
+                    .filter(
+                        models.TeamMember.team_id == task.team_id,
+                        models.TeamMember.user_id == assigned_user.id
+                    )
+                    .first()
+                )
+
+                if member is None:
+                    return "not_allowed"
+
+        # Regular users must belong to the selected team.
+        else:
             member = (
                 db.query(models.TeamMember)
                 .filter(
@@ -186,6 +214,7 @@ def create_task(
             if member is None:
                 return "not_allowed"
 
+            
     # =====================================================
     # CREATE DATABASE TASK
     # =====================================================

@@ -1,6 +1,3 @@
-from app.config import settings
-
-
 # Test that creating a task without assigned_to_email is rejected
 def test_create_task_requires_assigned_to_email(client, admin_headers):
     # Attempt to create a task without the required assigned_to_email field
@@ -90,7 +87,7 @@ def test_create_task_success(client, admin_headers):
             "title": "Pytest task",
             "description": "Task created during automated testing",
             "status": "pending",
-            "assigned_to_email": settings.admin_email,
+            "assigned_to_email": "testadmin@example.com",
             "team_id": None
         }
     )
@@ -106,7 +103,7 @@ def test_create_task_success(client, admin_headers):
     assert created_task["title"] == "Pytest task"
     assert created_task["description"] == "Task created during automated testing"
     assert created_task["status"] == "pending"
-    assert created_task["assigned_to_email"] == settings.admin_email
+    assert created_task["assigned_to_email"] == "testadmin@example.com"
 
     # Retrieve the task using its actual ID and the admin's token
     get_response = client.get(
@@ -121,4 +118,5 @@ def test_create_task_success(client, admin_headers):
     retrieved_task = get_response.json()
     assert retrieved_task["id"] == task_id
     assert retrieved_task["title"] == "Pytest task"
-    assert retrieved_task["assigned_to_email"] == settings.admin_email
+    # Confirm the retrieved task is assigned to the test admin.
+    assert retrieved_task["assigned_to_email"] == "testadmin@example.com"
