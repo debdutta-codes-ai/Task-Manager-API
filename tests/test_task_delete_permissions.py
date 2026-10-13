@@ -241,3 +241,86 @@ def test_admin_can_delete_any_users_task(client, test_db):
         .first()
     )
     assert deleted_task is None
+
+def test_manager_cannot_delete_task_in_another_managers_team(client, test_db):
+    from app import models
+    from app.auth import password_hash
+
+    # Get the existing manager and user
+    manager = test_db.query(models.User).filter(
+        models.User.username == "testmanager"
+    ).first()
+
+    user = test_db.query(models.User).filter(
+        models.User.username == "testuser"
+    ).first()
+
+    # Create a second manager
+    other_manager = models.User(
+        username="othermanager",
+        email="othermanager@example.com",
+        password_hash=password_hash.hash("OtherManager123!"),
+        role=manager.role,
+        status="active"
+    )
+    test_db.add(other_manager)
+    test_db.commit()
+    test_db.refresh(other_manager)
+
+    # Create a team owned by the second manager
+    team = models.Team(
+        name="Other Manager Delete Team",
+        manager_id=other_manager.id
+    )
+    test_db.add(team)
+    test_db.commit()
+    test_db.refresh(team)
+
+    # Add the user to that team
+    membership = models.TeamMember(
+        team_id=team.id,
+        user_id=user.id
+    )
+    test_db.add(membership)
+
+    # Create a task in the second manager's team
+    task = models.Task(
+        title="Restricted team task",
+        description="Should not be deleted by another manager",
+        status="pending",
+        owner_id=user.id,
+        assigned_to=user.id,
+        team_id=team.id
+    )
+    test_db.add(task)
+    test_db.commit()
+    test_db.refresh(task)
+
+    # Log in as the original manager
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testmanager",
+            "password": "TestManager123!"
+        }
+    )
+    assert login_response.status_code == 200
+
+    manager_headers = {
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
+    }
+
+    # The manager should not be allowed to delete this task
+    response = client.delete(
+        f"/tasks/{task.id}",
+        headers=manager_headers
+    )
+
+    assert response.status_code == 403
+
+    # Confirm the task still exists
+    existing_task = test_db.query(models.Task).filter(
+        models.Task.id == task.id
+    ).first()
+
+    assert existing_task is not None

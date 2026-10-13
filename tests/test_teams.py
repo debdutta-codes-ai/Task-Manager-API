@@ -195,3 +195,26 @@ def test_regular_user_cannot_create_team(client, test_db):
 
     # A regular user should not have permission to create a team.
     assert response.status_code == 403
+
+def test_manager_cannot_create_team(client):
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testmanager",
+            "password": "TestManager123!"
+        }
+    )
+
+    assert login_response.status_code == 200
+
+    manager_headers = {
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
+    }
+
+    response = client.post(
+        "/teams/",
+        headers=manager_headers,
+        json={"name": "Manager Created Team"}
+    )
+
+    assert response.status_code == 403

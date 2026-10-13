@@ -124,10 +124,219 @@ def test_regular_user_cannot_change_user_role(client, test_db):
     response = client.put(
         f"/users/{admin.id}/role",
         headers=user_headers,
-        json={"role": "manager"},
+        json={
+            "role_id": test_db.query(models.Role)
+            .filter(models.Role.name == "manager")
+            .first()
+            .id
+        },
     )
 
     assert response.status_code == 403
 
     test_db.refresh(admin)
     assert admin.role.name == original_role
+
+def test_manager_cannot_list_users(client):
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testmanager",
+            "password": "TestManager123!"
+        }
+    )
+
+    assert login_response.status_code == 200
+
+    manager_headers = {
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
+    }
+
+    response = client.get(
+        "/users/",
+        headers=manager_headers
+    )
+
+    assert response.status_code == 403
+
+def test_manager_cannot_change_user_role(client, test_db):
+    from app import models
+
+    # Get the admin user
+    admin = test_db.query(models.User).filter(
+        models.User.username == "testadmin"
+    ).first()
+
+    # Log in as manager
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testmanager",
+            "password": "TestManager123!"
+        }
+    )
+
+    assert login_response.status_code == 200
+
+    manager_headers = {
+        "Authorization": f"Bearer {login_response.json()['access_token']}"
+    }
+
+    # Try to change the admin's role
+    response = client.put(
+        f"/users/{admin.id}/role",
+        headers=manager_headers,
+        json={
+           "role_id": test_db.query(models.Role)
+    .filter(models.Role.name == "manager")
+    .first()
+    .id
+},
+    )
+
+    assert response.status_code == 403
+
+def test_regular_user_cannot_delete_user(client, test_db):
+    from app import models
+
+    admin = (
+        test_db.query(models.User)
+        .filter(models.User.username == "testadmin")
+        .first()
+    )
+
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testuser",
+            "password": "TestUser123!",
+        },
+    )
+    assert login_response.status_code == 200
+
+    user_headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        )
+    }
+
+    response = client.delete(
+        f"/users/{admin.id}",
+        headers=user_headers,
+    )
+
+    assert response.status_code == 403
+
+    # Confirm the admin account still exists.
+    existing_admin = (
+        test_db.query(models.User)
+        .filter(models.User.id == admin.id)
+        .first()
+    )
+    assert existing_admin is not None
+
+
+def test_manager_cannot_delete_user(client, test_db):
+    from app import models
+
+    admin = (
+        test_db.query(models.User)
+        .filter(models.User.username == "testadmin")
+        .first()
+    )
+
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testmanager",
+            "password": "TestManager123!",
+        },
+    )
+    assert login_response.status_code == 200
+
+    manager_headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        )
+    }
+
+    response = client.delete(
+        f"/users/{admin.id}",
+        headers=manager_headers,
+    )
+
+    assert response.status_code == 403
+
+    # Confirm the admin account still exists.
+    test_db.refresh(admin)
+    assert admin.username == "testadmin"
+
+def test_admin_can_delete_user(client, test_db):
+    from app import models
+
+    user = (
+        test_db.query(models.User)
+        .filter(models.User.username == "testuser")
+        .first()
+    )
+
+    user_id = user.id
+
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testadmin",
+            "password": "TestAdmin123!",
+        },
+    )
+    assert login_response.status_code == 200
+
+    admin_headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        )
+    }
+
+    response = client.delete(
+        f"/users/{user_id}",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+
+    # Confirm the user still exists but is soft-deleted.
+    test_db.expire_all()
+
+    deleted_user = (
+        test_db.query(models.User)
+        .filter(models.User.id == user_id)
+        .first()
+    )
+
+    assert deleted_user is not None
+    assert deleted_user.status == "inactive"
+    assert deleted_user.deleted_at is not None
+    assert deleted_user.deleted_by is not None
+
+def test_admin_cannot_delete_nonexistent_user(client):
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testadmin",
+            "password": "TestAdmin123!",
+        },
+    )
+    assert login_response.status_code == 200
+
+    admin_headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        )
+    }
+
+    response = client.delete(
+        "/users/999999",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 404
