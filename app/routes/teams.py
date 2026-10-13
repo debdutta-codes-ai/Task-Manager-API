@@ -33,7 +33,8 @@ def get_teams(
 
 # =========================
 # Get One Team
-# Requires change_roles permission
+# Admin can view any team.
+# Manager can view their own team only.
 # =========================
 
 @router.get(
@@ -43,9 +44,7 @@ def get_teams(
 def get_team(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(
-        auth.require_permissions("change_roles")
-    )
+    current_user=Depends(auth.get_current_user)
 ):
     # Find the requested team
     team = (
@@ -54,14 +53,29 @@ def get_team(
         .first()
     )
 
-    # Return 404 if the team doesn't exist
     if team is None:
         raise HTTPException(
             status_code=404,
             detail="Team not found"
         )
 
-    return team
+    # Admin can view any team
+    if current_user.role and current_user.role.name == "admin":
+        return team
+
+    # Manager can view their own team only
+    if (
+        current_user.role
+        and current_user.role.name == "manager"
+        and team.manager_id == current_user.id
+    ):
+        return team
+
+    # Everyone else is forbidden
+    raise HTTPException(
+        status_code=403,
+        detail="Not allowed to view this team"
+    )
 
     
 # =========================
@@ -81,9 +95,13 @@ def create_team(
         auth.require_permissions("change_roles")
     )
 ):
+    # Find an active user with the selected manager ID.
     manager = (
         db.query(models.User)
-        .filter(models.User.id == team.manager_id)
+        .filter(
+            models.User.id == team.manager_id,
+            models.User.status == "active"
+        )
         .first()
     )
 

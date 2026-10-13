@@ -30,3 +30,9 @@ from app.crud.role import (
     get_roles,
     get_role,
 )
+
+from app.crud.permission import (
+    get_permission,
+    update_permission,
+    delete_permission,
+)
