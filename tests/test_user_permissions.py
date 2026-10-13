@@ -340,3 +340,80 @@ def test_admin_cannot_delete_nonexistent_user(client):
     )
 
     assert response.status_code == 404
+
+def test_user_response_includes_nested_role_and_permissions(client):
+    response = client.post(
+        "/users/login",
+        data={
+            "username": "testuser",
+            "password": "TestUser123!",
+        },
+    )
+    assert response.status_code == 200
+
+    token = response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/users/", headers=headers)
+
+    assert response.status_code == 403
+
+def test_my_profile_includes_nested_role_and_permissions(client):
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testuser",
+            "password": "TestUser123!",
+        },
+    )
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = client.get(
+        "/users/me",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "role" in data
+    assert data["role"] is not None
+    assert "name" in data["role"]
+    assert "permissions" in data["role"]
+    assert isinstance(data["role"]["permissions"], list)
+
+    for permission in data["role"]["permissions"]:
+        assert "id" in permission
+        assert "name" in permission
+
+def test_admin_user_list_includes_nested_role_and_permissions(client):
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testadmin",
+            "password": "TestAdmin123!",
+        },
+    )
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = client.get("/users/", headers=headers)
+
+    assert response.status_code == 200
+    users = response.json()
+    assert len(users) > 0
+
+    for user in users:
+        assert user["role"] is not None
+        assert "name" in user["role"]
+        assert isinstance(user["role"]["permissions"], list)

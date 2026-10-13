@@ -45,91 +45,6 @@ class TaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-
-# =========================
-# User Schemas
-# =========================
-
-class UserCreate(BaseModel):
-    username: str
-    email: str
-    password: str = Field(min_length=8)
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, value):
-        if not any(char.isupper() for char in value):
-            raise ValueError(
-                "Password must contain at least one uppercase letter"
-            )
-
-        if not any(char.islower() for char in value):
-            raise ValueError(
-                "Password must contain at least one lowercase letter"
-            )
-
-        if not any(char.isdigit() for char in value):
-            raise ValueError(
-                "Password must contain at least one number"
-            )
-
-        if not any(not char.isalnum() for char in value):
-            raise ValueError(
-                "Password must contain at least one special character"
-            )
-
-        return value
-
-
-class UserResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    username: str
-    email: str
-    created_at: datetime
-    updated_at: datetime
-    last_login: datetime | None = None
-
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-# =========================
-# Team Schemas
-# =========================
-
-class TeamCreate(BaseModel):
-    name: str
-    manager_id: int
-
-
-class TeamResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str
-    manager_id: int
-    created_at: datetime
-    updated_at: datetime
-
-
-class TeamMemberAdd(BaseModel):
-    user_id: int
-
-
-class TeamUpdate(BaseModel):
-    name: str
-    manager_id: int
-
-
 # =========================
 # Permission Schemas
 # =========================
@@ -176,6 +91,92 @@ class RoleResponse(BaseModel):
     permissions: list[PermissionResponse] = Field(
         default_factory=list
     )
+
+# =========================
+# User Schemas
+# =========================
+
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str = Field(min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value):
+        if not any(char.isupper() for char in value):
+            raise ValueError(
+                "Password must contain at least one uppercase letter"
+            )
+
+        if not any(char.islower() for char in value):
+            raise ValueError(
+                "Password must contain at least one lowercase letter"
+            )
+
+        if not any(char.isdigit() for char in value):
+            raise ValueError(
+                "Password must contain at least one number"
+            )
+
+        if not any(not char.isalnum() for char in value):
+            raise ValueError(
+                "Password must contain at least one special character"
+            )
+
+        return value
+
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    email: str
+    created_at: datetime
+    updated_at: datetime
+    last_login: datetime | None = None
+    role: RoleResponse | None = None
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+# =========================
+# Team Schemas
+# =========================
+
+class TeamCreate(BaseModel):
+    name: str
+    manager_id: int
+
+
+class TeamResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    manager_id: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class TeamMemberAdd(BaseModel):
+    user_id: int
+
+
+class TeamUpdate(BaseModel):
+    name: str
+    manager_id: int
+
+
 
 # =========================
 # Change User Role Schema
