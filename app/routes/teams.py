@@ -8,6 +8,28 @@ from app.schemas import TeamCreate, TeamResponse, TeamMemberAdd, TeamUpdate
 
 router = APIRouter(prefix="/teams")
 
+
+def team_to_response(db: Session, team: models.Team):
+    members = (
+        db.query(models.User)
+        .join(
+            models.TeamMember,
+            models.TeamMember.user_id == models.User.id
+        )
+        .filter(models.TeamMember.team_id == team.id)
+        .order_by(models.User.id)
+        .all()
+    )
+
+    return {
+        "id": team.id,
+        "name": team.name,
+        "manager_id": team.manager_id,
+        "created_at": team.created_at,
+        "updated_at": team.updated_at,
+        "members": members,
+        "member_count": len(members)
+    }
 # =========================
 # Get All Teams
 # Requires change_roles permission
@@ -127,7 +149,7 @@ def create_team(
     db.commit()
     db.refresh(db_team)
 
-    return db_team
+    return team_to_response(db, db_team)
 
 
 # =========================
@@ -140,9 +162,7 @@ def add_team_member(
     team_id: int,
     member: TeamMemberAdd,
     db: Session = Depends(get_db),
-    current_user=Depends(
-        auth.require_permissions("change_roles")
-    )
+    current_user=Depends(auth.get_current_user)
 ):
     team = (
         db.query(models.Team)
@@ -154,6 +174,25 @@ def add_team_member(
         raise HTTPException(
             status_code=404,
             detail="Team not found"
+        )
+
+    # Admin can add members to any team.
+    # Manager can add members to their own team only.
+    is_admin = (
+        current_user.role is not None
+        and current_user.role.name == "admin"
+    )
+
+    is_own_team_manager = (
+        current_user.role is not None
+        and current_user.role.name == "manager"
+        and team.manager_id == current_user.id
+    )
+
+    if not is_admin and not is_own_team_manager:
+        raise HTTPException(
+            status_code=403,
+            detail="Not allowed to add members to this team"
         )
 
     user = (
@@ -168,7 +207,7 @@ def add_team_member(
             detail="User not found"
         )
 
-    # Only users with the "user" role can be team members
+    # Only users with the "user" role can be team members.
     if user.role is None or user.role.name != "user":
         raise HTTPException(
             status_code=400,
@@ -203,6 +242,123 @@ def add_team_member(
         "message": "User added to team successfully"
     }
 
+# =========================
+# List Team Members
+# Admin can view any team.
+# Manager can view their own team only.
+# =========================
+
+@router.get("/{team_id}/members")
+def get_team_members(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(auth.get_current_user)
+):
+    team = (
+        db.query(models.Team)
+        .filter(models.Team.id == team_id)
+        .first()
+    )
+
+    if team is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    is_admin = (
+        current_user.role is not None
+        and current_user.role.name == "admin"
+    )
+
+    is_own_team_manager = (
+        current_user.role is not None
+        and current_user.role.name == "manager"
+        and team.manager_id == current_user.id
+    )
+
+    if not is_admin and not is_own_team_manager:
+        raise HTTPException(
+            status_code=403,
+            detail="Not allowed to view this team's members"
+        )
+
+    members = (
+        db.query(models.User)
+        .join(
+            models.TeamMember,
+            models.TeamMember.user_id == models.User.id
+        )
+        .filter(models.TeamMember.team_id == team_id)
+        .order_by(models.User.id)
+        .all()
+    )
+
+    return members
+
+# =========================
+# Remove Team Member
+# Admin can remove members from any team.
+# Manager can remove members from their own team only.
+# =========================
+
+@router.delete("/{team_id}/members/{user_id}")
+def remove_team_member(
+    team_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(auth.get_current_user)
+):
+    team = (
+        db.query(models.Team)
+        .filter(models.Team.id == team_id)
+        .first()
+    )
+
+    if team is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team not found"
+        )
+
+    is_admin = (
+        current_user.role is not None
+        and current_user.role.name == "admin"
+    )
+
+    is_own_team_manager = (
+        current_user.role is not None
+        and current_user.role.name == "manager"
+        and team.manager_id == current_user.id
+    )
+
+    if not is_admin and not is_own_team_manager:
+        raise HTTPException(
+            status_code=403,
+            detail="Not allowed to remove members from this team"
+        )
+
+    team_member = (
+        db.query(models.TeamMember)
+        .filter(
+            models.TeamMember.team_id == team_id,
+            models.TeamMember.user_id == user_id
+        )
+        .first()
+    )
+
+    if team_member is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Team member not found"
+        )
+
+    db.delete(team_member)
+    db.commit()
+
+    return {
+        "message": "Team member removed successfully"
+    }
 
 # =========================
 # Update Team
@@ -245,7 +401,7 @@ def update_team(
             detail="Selected user is not a manager"
         )
 
-    return updated_team
+    return team_to_response(db, updated_team)
 
 
 # =========================

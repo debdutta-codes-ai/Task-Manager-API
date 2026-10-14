@@ -166,6 +166,8 @@ class TeamResponse(BaseModel):
     manager_id: int
     created_at: datetime
     updated_at: datetime
+    members: list[UserResponse] = []
+    member_count: int = 0
 
 
 class TeamMemberAdd(BaseModel):
