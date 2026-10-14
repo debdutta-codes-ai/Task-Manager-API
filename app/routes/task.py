@@ -125,7 +125,10 @@ def get_task(
     # Read own task
     # -----------------------------------------------------
 
-    if task.owner_id == current_user.id:
+    if (
+        task.owner_id == current_user.id
+        or task.assigned_to == current_user.id
+    ):
 
         if "read_own_task" in user_permissions:
             return crud.task_to_response(task)
@@ -292,10 +295,39 @@ def update_task(
 
         return updated_task
 
+    
+    # -----------------------------------------------------
+    # Update task assigned to the current user
+    # -----------------------------------------------------
+
+    if db_task.assigned_to == current_user.id:
+
+        if "update_own_task" not in user_permissions:
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient permissions"
+            )
+
+        updated_task = crud.update_assigned_task(
+            db,
+            task_id,
+            task,
+            current_user.id
+        )
+
+        if updated_task is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Task not found"
+            )
+
+        return updated_task
+
     raise HTTPException(
         status_code=403,
         detail="You are not allowed to update this task"
     )
+
 
 
 # =========================================================

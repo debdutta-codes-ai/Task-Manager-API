@@ -302,12 +302,18 @@ def get_tasks(
     # READ OWN TASKS
     # =====================================================
 
-    if "read_own_task" in user_permissions:
+    
+    # =====================================================
+    # READ OWN OR ASSIGNED TASKS
+    # =====================================================
 
+    if "read_own_task" in user_permissions:
         tasks = (
             db.query(models.Task)
             .filter(
-                models.Task.owner_id == current_user.id
+                (models.Task.owner_id == current_user.id)
+                |
+                (models.Task.assigned_to == current_user.id)
             )
             .all()
         )
@@ -316,6 +322,7 @@ def get_tasks(
             task_to_response(task)
             for task in tasks
         ]
+
 
     return []
 
@@ -547,19 +554,18 @@ def update_task_by_manager_or_admin(
         else:
 
             assigned_user_id = assigned_user.id
+    # # =====================================================
+    # # NO ASSIGNED EMAIL PROVIDED
+    # # =====================================================
 
-    # =====================================================
-    # NO ASSIGNED EMAIL PROVIDED
-    # =====================================================
+    # else:
 
-    else:
+    #     # Preserve the existing assignment when no new
+    #     # email is supplied.
+    # assigned_user_id = db_task.assigned_to
 
-        # Preserve the existing assignment when no new
-        # email is supplied.
-        assigned_user_id = db_task.assigned_to
-
-        if assigned_user_id is None:
-            assigned_user_id = current_user.id
+    # if assigned_user_id is None:
+    #         assigned_user_id = current_user.id
 
     # =====================================================
     # UPDATE DATABASE TASK
@@ -576,6 +582,37 @@ def update_task_by_manager_or_admin(
 
     return task_to_response(db_task)
 
+#assigned user can update the task's title, description, and status, 
+# but cannot reassign it or move it to another team.  
+
+def update_assigned_task(
+    db: Session,
+    task_id: int,
+    task: TaskCreate,
+    current_user_id: int
+):
+    db_task = (
+        db.query(models.Task)
+        .filter(
+            models.Task.id == task_id,
+            models.Task.assigned_to == current_user_id
+        )
+        .first()
+    )
+
+    if db_task is None:
+        return None
+
+    # Assigned users can update task details and status,
+    # but cannot change ownership, assignment, or team.
+    db_task.title = task.title
+    db_task.description = task.description
+    db_task.status = task.status
+
+    db.commit()
+    db.refresh(db_task)
+
+    return task_to_response(db_task)
 
 # =========================================================
 # DELETE TASK
