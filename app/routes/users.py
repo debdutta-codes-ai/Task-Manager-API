@@ -231,6 +231,7 @@ def delete_user(
     return deleted_user
 
 
+
 # =========================================================
 # CHANGE USER ROLE
 # Requires: change_roles
@@ -274,7 +275,25 @@ def change_user_role(
             detail="Role not found"
         )
 
-    # Assign the new role to the user
+    # Prevent removing the last active administrator
+    if user.role.name == "admin" and role.name != "admin":
+        active_admin_count = (
+            db.query(models.User)
+            .join(models.Role)
+            .filter(
+                models.Role.name == "admin",
+                models.User.status == "active"
+            )
+            .count()
+        )
+
+        if active_admin_count <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot demote the last active administrator"
+            )
+
+    # Assign the new role
     user.role_id = role.id
 
     db.commit()

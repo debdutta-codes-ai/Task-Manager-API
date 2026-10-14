@@ -417,3 +417,70 @@ def test_admin_user_list_includes_nested_role_and_permissions(client):
         assert user["role"] is not None
         assert "name" in user["role"]
         assert isinstance(user["role"]["permissions"], list)
+
+
+def test_admin_cannot_demote_the_last_active_admin(client, test_db):
+    from app import models
+
+    admin = (
+        test_db.query(models.User)
+        .filter(models.User.username == "testadmin")
+        .first()
+    )
+
+    manager_role = (
+        test_db.query(models.Role)
+        .filter(models.Role.name == "manager")
+        .first()
+    )
+
+    assert admin is not None
+    assert manager_role is not None
+
+    # Ensure this test has exactly one active administrator.
+    other_active_admins = (
+        test_db.query(models.User)
+        .join(models.Role)
+        .filter(
+            models.Role.name == "admin",
+            models.User.status == "active",
+            models.User.id != admin.id
+        )
+        .all()
+    )
+
+    for other_admin in other_active_admins:
+        other_admin.status = "inactive"
+
+    admin.status = "active"
+    test_db.commit()
+
+    login_response = client.post(
+        "/users/login",
+        data={
+            "username": "testadmin",
+            "password": "TestAdmin123!",
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    admin_headers = {
+        "Authorization": (
+            f"Bearer {login_response.json()['access_token']}"
+        )
+    }
+
+    response = client.put(
+        f"/users/{admin.id}/role",
+        headers=admin_headers,
+        json={"role_id": manager_role.id},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Cannot demote the last active administrator"
+    )
+
+    test_db.refresh(admin)
+    assert admin.role.name == "admin"
